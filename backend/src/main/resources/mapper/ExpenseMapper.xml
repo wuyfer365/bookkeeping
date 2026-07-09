@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bookkeeping.mapper.ExpenseMapper">
+
+    <!-- ========== CRUD ========== -->
+
+    <resultMap id="ExpenseVOMap" type="com.bookkeeping.dto.ExpenseVO">
+        <id     property="id"                column="id"/>
+        <result property="amount"            column="amount"/>
+        <result property="categoryId"        column="category_id"/>
+        <result property="categoryName"      column="category_name"/>
+        <result property="parentCategoryId"  column="parent_category_id"/>
+        <result property="parentCategoryName" column="parent_category_name"/>
+        <result property="expenseDate"       column="expense_date"/>
+        <result property="description"       column="description"/>
+        <result property="createdAt"         column="created_at"/>
+        <result property="updatedAt"         column="updated_at"/>
+    </resultMap>
+
+    <!-- 分页列表 -->
+    <select id="findWithCategory" resultMap="ExpenseVOMap">
+        SELECT e.id, e.amount, e.expense_date, e.description, e.created_at, e.updated_at,
+               c.id   AS category_id,
+               c.name AS category_name,
+               pc.id   AS parent_category_id,
+               pc.name AS parent_category_name
+        FROM expenses e
+        JOIN categories c  ON e.category_id = c.id
+        LEFT JOIN categories pc ON c.parent_id = pc.id
+        <where>
+            <if test="query.startDate != null">
+                AND e.expense_date &gt;= #{query.startDate}
+            </if>
+            <if test="query.endDate != null">
+                AND e.expense_date &lt;= #{query.endDate}
+            </if>
+            <if test="query.categoryId != null">
+                AND e.category_id = #{query.categoryId}
+            </if>
+        </where>
+        ORDER BY e.expense_date DESC, e.created_at DESC
+        LIMIT #{query.size} OFFSET #{query.offset}
+    </select>
+
+    <!-- 总数 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM expenses e
+        <where>
+            <if test="query.startDate != null">
+                AND e.expense_date &gt;= #{query.startDate}
+            </if>
+            <if test="query.endDate != null">
+                AND e.expense_date &lt;= #{query.endDate}
+            </if>
+            <if test="query.categoryId != null">
+                AND e.category_id = #{query.categoryId}
+            </if>
+        </where>
+    </select>
+
+    <!-- 详情 -->
+    <select id="findById" resultMap="ExpenseVOMap">
+        SELECT e.id, e.amount, e.expense_date, e.description, e.created_at, e.updated_at,
+               c.id   AS category_id,
+               c.name AS category_name,
+               pc.id   AS parent_category_id,
+               pc.name AS parent_category_name
+        FROM expenses e
+        JOIN categories c  ON e.category_id = c.id
+        LEFT JOIN categories pc ON c.parent_id = pc.id
+        WHERE e.id = #{id}
+    </select>
+
+    <insert id="insert">
+        <selectKey keyProperty="id" resultType="int" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+        INSERT INTO expenses (amount, category_id, expense_date, description)
+        VALUES (#{amount}, #{categoryId}, #{expenseDate}, #{description})
+    </insert>
+
+    <update id="update">
+        UPDATE expenses
+        SET amount       = #{amount},
+            category_id  = #{categoryId},
+            expense_date = #{expenseDate},
+            description  = #{description},
+            updated_at   = datetime('now','localtime')
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM expenses WHERE id = #{id}
+    </delete>
+
+    <!-- ========== 统计 ========== -->
+
+    <!-- 汇总 -->
+    <select id="summary" resultType="com.bookkeeping.dto.StatisticsVO$Summary">
+        SELECT
+            COALESCE(SUM(amount), 0)     AS totalAmount,
+            COUNT(*)                     AS recordCount,
+            COALESCE(ROUND(SUM(amount) * 1.0 / COUNT(DISTINCT expense_date), 2), 0) AS avgPerDay
+        FROM expenses
+        WHERE expense_date BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+    <!-- 按一级分类统计 -->
+    <select id="statByCategory" resultType="com.bookkeeping.dto.StatisticsVO$CategoryStat">
+        SELECT
+            pc.id   AS categoryId,
+            pc.name AS categoryName,
+            COALESCE(SUM(e.amount), 0) AS totalAmount,
+            COUNT(*)                   AS count
+        FROM expenses e
+        JOIN categories c  ON e.category_id = c.id
+        JOIN categories pc ON c.parent_id = pc.id
+        WHERE e.expense_date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY pc.id, pc.name
+        ORDER BY totalAmount DESC
+    </select>
+
+    <!-- 近N月趋势 -->
+    <select id="trendByMonth" resultType="com.bookkeeping.dto.StatisticsVO$MonthTrend">
+        SELECT
+            strftime('%Y-%m', expense_date) AS month,
+            COALESCE(SUM(amount), 0)        AS totalAmount
+        FROM expenses
+        WHERE expense_date >= date('now', '-' || #{months} || ' months', 'start of month')
+        GROUP BY strftime('%Y-%m', expense_date)
+        ORDER BY month ASC
+    </select>
+
+</mapper>
