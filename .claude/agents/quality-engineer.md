@@ -106,3 +106,15 @@ tools: Bash, Skill, Read, Grep, Glob, Edit
 | 5-6 | 有中危问题需关注 |
 | 3-4 | 高危问题，建议立刻修 |
 | 1-2 | 多项严重问题 |
+
+### 生成标记文件（Guard）
+
+如果总分 ≥ 30/50，则标记通过：
+```bash
+mkdir -p .claude/commit-checks
+echo "PASSED at $(date)" > .claude/commit-checks/quality-passed
+```
+否则清理标记：
+```bash
+rm -f .claude/commit-checks/quality-passed
+```

@@ -36,16 +36,18 @@ cd frontend && node -e "const p=require('./package.json'); if(p.scripts?.test) p
 - 有 test 脚本 → `npx vitest run`
 - 无 test 脚本 → 输出"前端未配置测试脚本（package.json 中无 test 命令）"，跳过
 
-### 3. 汇总报告
+### 4. Guard file
 
-用表格列出：
+如果全部测试通过，生成提交标记文件：
+```bash
+mkdir -p .claude/commit-checks
+echo "PASSED at $(date)" > .claude/commit-checks/test-passed
+```
 
-| 测试端 | 状态 | 详情 |
-|--------|------|------|
-| 后端   | ✅ 通过 / ❌ 失败 / ⏭️ 跳过 | 测试数 X, 通过 X, 失败 X, 耗时 Xs |
-| 前端   | ✅ 通过 / ❌ 失败 / ⏭️ 跳过 | 有输出时同理 |
-
-若全部通过则强调"🟢 全部测试通过"；若有失败则用"🔴 N 项测试失败"突出显示。
+如果任一测试失败，删除标记文件：
+```bash
+rm -f .claude/commit-checks/test-passed
+```
 
 ## 异常处理
 
