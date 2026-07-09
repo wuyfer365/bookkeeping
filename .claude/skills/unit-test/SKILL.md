@@ -1,5 +1,5 @@
 ---
-name: tester
+name: unit-test
 description: 运行后端 Maven 测试和前端测试，汇总报告结果
 argument-hint: [--backend-only | --frontend-only]
 ---
