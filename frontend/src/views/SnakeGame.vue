@@ -86,7 +86,19 @@ const BASE_SPEED = 130        // 初始速度 (ms)
 const canvasRef = ref(null)
 const gameState = ref('idle') // idle | playing | paused | over
 const score = ref(0)
-const highScore = ref(parseInt(localStorage.getItem('snake_high_score') || '0'))
+const highScore = ref(parseInt(localStorage.getItem('snake_high_score') || '0', 10))
+
+// ==================== 按键映射（模块级常量，避免每次按键重分配） ====================
+const KEY_MAP = {
+  ArrowUp:    { x: 0, y: -1 },
+  ArrowDown:  { x: 0, y: 1 },
+  ArrowLeft:  { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 },
+  w: { x: 0, y: -1 },
+  s: { x: 0, y: 1 },
+  a: { x: -1, y: 0 },
+  d: { x: 1, y: 0 },
+}
 
 // ==================== 游戏内部变量 ====================
 let snake = []
@@ -109,14 +121,26 @@ function initSnake() {
 
 function randomFood() {
   const occupied = new Set(snake.map(s => `${s.x},${s.y}`))
-  let pos
-  do {
-    pos = {
+  const totalCells = GRID_SIZE * GRID_SIZE
+  if (occupied.size >= totalCells) return null  // 棋盘已满（理论上游戏胜利）
+
+  // 随机尝试有限次数
+  const maxAttempts = 100
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const pos = {
       x: Math.floor(Math.random() * GRID_SIZE),
       y: Math.floor(Math.random() * GRID_SIZE),
     }
-  } while (occupied.has(`${pos.x},${pos.y}`))
-  return pos
+    if (!occupied.has(`${pos.x},${pos.y}`)) return pos
+  }
+
+  // 退路：线性扫描找第一个空位
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      if (!occupied.has(`${x},${y}`)) return { x, y }
+    }
+  }
+  return null
 }
 
 function draw() {
@@ -233,7 +257,13 @@ function move() {
   // 吃到食物
   if (newHead.x === food.x && newHead.y === food.y) {
     score.value += 10
-    food = randomFood()
+    const newFood = randomFood()
+    if (!newFood) {
+      // 棋盘已满，玩家胜利
+      endGame()
+      return
+    }
+    food = newFood
   } else {
     snake.pop()
   }
@@ -261,13 +291,19 @@ function endGame() {
 
 // ==================== 控制方法 ====================
 
-function startGame() {
+/** 重置棋盘状态（蛇、方向、食物、分数） */
+function resetBoard() {
   clearTimeout(gameLoop)
+  gameLoop = null
   initSnake()
   direction = { x: 1, y: 0 }
   nextDirection = { x: 1, y: 0 }
   score.value = 0
   food = randomFood()
+}
+
+function startGame() {
+  resetBoard()
   gameState.value = 'playing'
   nextTick(() => {
     if (canvasRef.value) {
@@ -292,41 +328,21 @@ function resumeGame() {
     if (canvasRef.value) {
       canvasRef.value.focus()
     }
+    draw()
     scheduleNext()
   })
 }
 
 function resetToIdle() {
-  clearTimeout(gameLoop)
-  gameLoop = null
+  resetBoard()
   gameState.value = 'idle'
-  score.value = 0
-  initSnake()
-  direction = { x: 1, y: 0 }
-  nextDirection = { x: 1, y: 0 }
-  food = randomFood()
   nextTick(() => draw())
 }
 
 function handleKeydown(e) {
   if (gameState.value !== 'playing') return
 
-  const keyMap = {
-    ArrowUp:    { x: 0, y: -1 },
-    ArrowDown:  { x: 0, y: 1 },
-    ArrowLeft:  { x: -1, y: 0 },
-    ArrowRight: { x: 1, y: 0 },
-    w: { x: 0, y: -1 },
-    W: { x: 0, y: -1 },
-    s: { x: 0, y: 1 },
-    S: { x: 0, y: 1 },
-    a: { x: -1, y: 0 },
-    A: { x: -1, y: 0 },
-    d: { x: 1, y: 0 },
-    D: { x: 1, y: 0 },
-  }
-
-  const newDir = keyMap[e.key]
+  const newDir = KEY_MAP[e.key.toLowerCase()]
   if (!newDir) return
 
   // 禁止反向（不能掉头）
