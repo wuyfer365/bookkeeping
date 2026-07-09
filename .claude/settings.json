@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd //c \".\\\\mvnw.cmd test > mvnw_output.txt 2>&1\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(cmd //c \"start /wait .\\\\mvnw.cmd test > mvnw_output.txt 2>&1\")",
+      "Bash(echo \"---EXIT=$?---\")",
+      "Bash(npm install *)",
+      "Bash(cmd //c \"dir C:\\\\Users\\\\1\\\\AppData\\\\Local\\\\Temp\\\\bookkeeping-test.db 2>&1\")",
+      "Bash(git add *)"
+    ]
+  }
+}
