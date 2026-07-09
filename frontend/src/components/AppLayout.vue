@@ -29,6 +29,10 @@
           <el-icon><TrendCharts /></el-icon>
           <span>统计分析</span>
         </el-menu-item>
+        <el-menu-item index="/snake-game">
+          <el-icon><Gamepad /></el-icon>
+          <span>贪吃蛇</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

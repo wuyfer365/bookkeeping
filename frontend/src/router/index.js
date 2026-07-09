@@ -30,6 +30,12 @@ const routes = [
     name: 'statistics',
     component: () => import('../views/Statistics.vue'),
     meta: { title: '统计分析' }
+  },
+  {
+    path: '/snake-game',
+    name: 'snakeGame',
+    component: () => import('../views/SnakeGame.vue'),
+    meta: { title: '贪吃蛇 🐍' }
   }
 ]
 
